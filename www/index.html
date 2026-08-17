@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PC Fernsteuerung</title>
+<style>
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #111;
+    color: #fff;
+    margin: 0;
+    padding: 20px;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .hint { color: #888; font-size: 13px; margin-bottom: 20px; }
+  input[type=text] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #222;
+    color: #fff;
+    box-sizing: border-box;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  button {
+    padding: 18px;
+    border-radius: 12px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  button.danger { background: #dc2626; }
+  button:active { opacity: 0.7; }
+  #status { margin-top: 16px; color: #4ade80; font-size: 13px; min-height: 18px; }
+</style>
+</head>
+<body>
+
+<h1>🖥️ PC Fernsteuerung</h1>
+<div class="hint">Server-Adresse & API-Key eintragen (einmalig, wird lokal gespeichert)</div>
+
+<input type="text" id="serverUrl" placeholder="http://DEINE-TAILSCALE-IP:8000">
+<input type="text" id="apiKey" placeholder="API-Key">
+
+<div class="grid">
+  <button onclick="send('/media/playpause', 'POST')">⏯ Play/Pause</button>
+  <button onclick="send('/system/lock', 'POST')">🔒 Sperren</button>
+  <button onclick="send('/media/volume/up', 'POST')">🔊 Lauter</button>
+  <button onclick="send('/media/volume/down', 'POST')">🔉 Leiser</button>
+  <button onclick="send('/input/mouse/click?button=left', 'POST')">🖱 Klick</button>
+  <button class="danger" onclick="if(confirm('PC wirklich herunterfahren?')) send('/system/shutdown', 'POST')">⏻ Shutdown</button>
+</div>
+
+<div id="status"></div>
+
+<script>
+  // Speichert Eingaben lokal im Browser, damit du sie nicht jedes Mal eintippen musst
+  const urlInput = document.getElementById('serverUrl');
+  const keyInput = document.getElementById('apiKey');
+  urlInput.value = localStorage.getItem('serverUrl') || '';
+  keyInput.value = localStorage.getItem('apiKey') || '';
+  urlInput.oninput = () => localStorage.setItem('serverUrl', urlInput.value);
+  keyInput.oninput = () => localStorage.setItem('apiKey', keyInput.value);
+
+  async function send(path, method) {
+    const status = document.getElementById('status');
+    const base = urlInput.value.trim();
+    const key = keyInput.value.trim();
+    if (!base) { status.textContent = 'Bitte Server-Adresse eintragen'; return; }
+    try {
+      const res = await fetch(base + path, {
+        method,
+        headers: { 'X-API-Key': key }
+      });
+      const data = await res.json();
+      status.textContent = '✓ ' + (data.status || 'OK');
+    } catch (e) {
+      status.textContent = '✗ Fehler: ' + e.message;
+    }
+  }
+</script>
+
+</body>
+</html>
